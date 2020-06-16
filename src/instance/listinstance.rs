@@ -1,34 +1,32 @@
 use serde_json::Value;
-
-use super::util::*;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
 use super::leafinstance::LeafInstance;
 use super::listchildinstance::ListChildInstance;
+use super::util::*;
 use crate::model::list::List;
 
 pub struct ListData<'a> {
     pub parent: Parent<'a>,
     pub model: &'a List,
-    pub children: Option<Rc<RefCell<HashMap<String, ListChildInstance<'a>>>>>,
+    pub children: Option<Arc<RwLock<HashMap<String, ListChildInstance<'a>>>>>,
     pub path: String,
 }
 
-type Link<'a> = Rc<RefCell<ListData<'a>>>;
+type Link<'a> = Arc<RwLock<ListData<'a>>>;
 
 pub struct ListInstance<'a>(Link<'a>);
 
 impl<'a> Clone for ListInstance<'a> {
     fn clone(&self) -> Self {
-        ListInstance(Rc::clone(&self.0))
+        ListInstance(Arc::clone(&self.0))
     }
 }
 
 impl<'a> PartialEq for ListInstance<'a> {
     fn eq(&self, other: &ListInstance<'a>) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
+        Arc::ptr_eq(&self.0, &other.0)
     }
 }
 
@@ -47,7 +45,7 @@ impl<'a> ListInstance<'a> {
         let path = format!("{}/{}", parent_path, model.name);
         let child_path = path.clone();
 
-        let instance = ListInstance(Rc::new(RefCell::new(ListData {
+        let instance = ListInstance(Arc::new(RwLock::new(ListData {
             model,
             children: None,
             path,
@@ -57,19 +55,29 @@ impl<'a> ListInstance<'a> {
         let mut children: HashMap<String, ListChildInstance> = HashMap::new();
 
         for list_value in value_arr.iter() {
-            let children_parent = Rc::downgrade(&instance.0);
+            let children_parent = Arc::downgrade(&instance.0);
             let child_instance =
                 ListChildInstance::new(model, list_value, child_path.clone(), children_parent);
             children.insert(child_instance.get_key(), child_instance);
         }
 
-        instance.0.borrow_mut().children = Some(Rc::new(RefCell::new(children)));
+        instance.0.write().unwrap().children = Some(Arc::new(RwLock::new(children)));
 
         instance
     }
 
     pub fn visit(&self, f: &dyn Fn(&LeafInstance) -> ()) {
-        for child in self.0.borrow().children.as_ref().unwrap().borrow().values() {
+        for child in self
+            .0
+            .read()
+            .unwrap()
+            .children
+            .as_ref()
+            .unwrap()
+            .read()
+            .unwrap()
+            .values()
+        {
             child.visit(f);
         }
     }

@@ -17,3 +17,9 @@ impl Container {
         }
     }
 }
+
+impl WithChildren for Container {
+    fn get_children(&self) -> &HashMap<String, Model> {
+        &self.children
+    }
+}

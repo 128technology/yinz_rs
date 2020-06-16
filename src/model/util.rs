@@ -1,3 +1,4 @@
+use inflector::cases::camelcase::to_camel_case;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
@@ -84,7 +85,7 @@ pub fn evaluate_get_yin_xpath<'a>(
 }
 
 pub fn get_name(el: dom::Element) -> String {
-    el.attribute("name").unwrap().value().to_string()
+    to_camel_case(el.attribute("name").unwrap().value())
 }
 
 pub fn parse_children(el: dom::Element) -> HashMap<String, Model> {
@@ -144,6 +145,22 @@ pub fn parse_child(el: dom::Element) -> Option<Child> {
         }
         _ => {
             return None;
+        }
+    }
+}
+
+pub trait WithChildren {
+    fn get_children(&self) -> &HashMap<String, Model>;
+
+    fn get_child(&self, name: &str) -> Option<&Model> {
+        let children = self.get_children();
+        let has_exact_match = children.contains_key(name);
+
+        if has_exact_match {
+            return children.get(name);
+        } else {
+            let camel_case_name = to_camel_case(name);
+            return children.get(&camel_case_name);
         }
     }
 }

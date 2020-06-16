@@ -1,7 +1,7 @@
+use inflector::cases::kebabcase::to_kebab_case;
 use serde_json::Value;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::{Rc, Weak};
+use std::sync::{Arc, RwLock, Weak};
 
 use super::containerinstance::ContainerInstance;
 use super::leafinstance::LeafInstance;
@@ -9,29 +9,29 @@ use super::leaflistinstance::LeafListInstance;
 use super::listinstance::{ListData, ListInstance};
 use super::util::*;
 use crate::model::list::List;
-use crate::model::util::Model;
+use crate::model::util::{Model, WithChildren};
 
 pub struct ListChildData<'a> {
-    pub parent: Weak<RefCell<ListData<'a>>>,
+    pub parent: Weak<RwLock<ListData<'a>>>,
     pub model: &'a List,
-    pub children: Option<Rc<RefCell<HashMap<String, Child<'a>>>>>,
+    pub children: Option<Arc<RwLock<HashMap<String, Child<'a>>>>>,
     pub path: String,
     pub key_value: String,
 }
 
-type Link<'a> = Rc<RefCell<ListChildData<'a>>>;
+type Link<'a> = Arc<RwLock<ListChildData<'a>>>;
 
 pub struct ListChildInstance<'a>(Link<'a>);
 
 impl<'a> Clone for ListChildInstance<'a> {
     fn clone(&self) -> Self {
-        ListChildInstance(Rc::clone(&self.0))
+        ListChildInstance(Arc::clone(&self.0))
     }
 }
 
 impl<'a> PartialEq for ListChildInstance<'a> {
     fn eq(&self, other: &ListChildInstance<'a>) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
+        Arc::ptr_eq(&self.0, &other.0)
     }
 }
 
@@ -48,8 +48,8 @@ pub fn parse_children<'a>(
     match value {
         Value::Object(x) => {
             for (k, v) in x.iter() {
-                let children_parent = Parent::ListChildData(Rc::downgrade(parent));
-                let child_model = model.children.get(k).unwrap();
+                let children_parent = Parent::ListChildData(Arc::downgrade(parent));
+                let child_model = model.get_child(k).unwrap();
 
                 match child_model {
                     Model::Leaf(m) => {
@@ -109,13 +109,18 @@ pub fn get_key_value<'a>(model: &'a List, value: &Value) -> String {
     let mut key_values: Vec<String> = Vec::new();
 
     for key in &model.keys {
-        let key_value = &value[key];
+        let key_value = match &value[key] {
+            Value::Null => &value[to_kebab_case(key)],
+            _ => &value[key],
+        };
         let key_value_string = match key_value {
-            Value::String(x) => x,
+            Value::String(x) => x.clone(),
+            Value::Number(x) => x.to_string(),
+            Value::Bool(x) => x.to_string(),
             _ => panic!("Key value must be a string."),
         };
 
-        key_values.push(key_value_string.to_string());
+        key_values.push(key_value_string);
     }
 
     key_values.join(",")
@@ -126,13 +131,13 @@ impl<'a> ListChildInstance<'a> {
         model: &'a List,
         value: &Value,
         parent_path: String,
-        parent: Weak<RefCell<ListData<'a>>>,
+        parent: Weak<RwLock<ListData<'a>>>,
     ) -> ListChildInstance<'a> {
         let key_value = get_key_value(model, value);
         let path = format!("{}={}", parent_path, key_value);
         let child_path = path.clone();
 
-        let instance = ListChildInstance(Rc::new(RefCell::new(ListChildData {
+        let instance = ListChildInstance(Arc::new(RwLock::new(ListChildData {
             model,
             children: None,
             path,
@@ -140,7 +145,7 @@ impl<'a> ListChildInstance<'a> {
             key_value,
         })));
 
-        instance.0.borrow_mut().children = Some(Rc::new(RefCell::new(parse_children(
+        instance.0.write().unwrap().children = Some(Arc::new(RwLock::new(parse_children(
             model,
             value,
             child_path,
@@ -151,11 +156,21 @@ impl<'a> ListChildInstance<'a> {
     }
 
     pub fn get_key(&self) -> String {
-        self.0.borrow().key_value.to_string()
+        self.0.read().unwrap().key_value.to_string()
     }
 
     pub fn visit(&self, f: &dyn Fn(&LeafInstance) -> ()) {
-        for child in self.0.borrow().children.as_ref().unwrap().borrow().values() {
+        for child in self
+            .0
+            .read()
+            .unwrap()
+            .children
+            .as_ref()
+            .unwrap()
+            .read()
+            .unwrap()
+            .values()
+        {
             match child {
                 Child::ContainerInstance(c) => {
                     c.visit(f);
@@ -176,7 +191,7 @@ impl<'a> ListChildInstance<'a> {
 
 impl<'a> ListChildData<'a> {
     pub fn is_generated(&self) -> bool {
-        for child in self.children.as_ref().unwrap().borrow().values() {
+        for child in self.children.as_ref().unwrap().read().unwrap().values() {
             match child {
                 Child::LeafInstance(c) => {
                     if c.model.name == "generated" && c.value == "true" {

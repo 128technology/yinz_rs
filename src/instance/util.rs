@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Weak;
+use std::sync::{RwLock, Weak};
 
 use super::containerinstance::{ContainerData, ContainerInstance};
 use super::leafinstance::LeafInstance;
@@ -15,6 +14,6 @@ pub enum Child<'a> {
 }
 
 pub enum Parent<'a> {
-    ContainerData(Weak<RefCell<ContainerData<'a>>>),
-    ListChildData(Weak<RefCell<ListChildData<'a>>>),
+    ContainerData(Weak<RwLock<ContainerData<'a>>>),
+    ListChildData(Weak<RwLock<ListChildData<'a>>>),
 }

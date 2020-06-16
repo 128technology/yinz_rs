@@ -1,3 +1,4 @@
+use inflector::cases::camelcase::to_camel_case;
 use std::collections::HashMap;
 use sxd_document::*;
 
@@ -15,7 +16,7 @@ fn parse_keys(el: dom::Element) -> Vec<String> {
     let key_attr_value = key_el.attribute("value").unwrap().value().to_string();
     let key_split = key_attr_value.split(" ");
 
-    key_split.map(|s| s.to_string()).collect()
+    key_split.map(|s| to_camel_case(s)).collect()
 }
 
 impl List {
@@ -25,5 +26,11 @@ impl List {
             children: parse_children(el),
             keys: parse_keys(el),
         }
+    }
+}
+
+impl WithChildren for List {
+    fn get_children(&self) -> &HashMap<String, Model> {
+        &self.children
     }
 }

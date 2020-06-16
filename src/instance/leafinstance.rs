@@ -18,13 +18,15 @@ impl<'a> LeafInstance<'a> {
         parent: Parent<'a>,
     ) -> LeafInstance<'a> {
         let value_str = match value {
-            Value::String(x) => x,
+            Value::String(x) => x.clone(),
+            Value::Number(x) => x.to_string(),
+            Value::Bool(x) => x.to_string(),
             _ => panic!("Leaf must have a string value!"),
         };
 
         LeafInstance {
             model,
-            value: value_str.clone(),
+            value: value_str,
             path: format!("{}/{}", parent_path, model.name),
             parent,
         }
@@ -36,7 +38,7 @@ impl<'a> LeafInstance<'a> {
 
     pub fn is_generated(&self) -> bool {
         match &self.parent {
-            Parent::ListChildData(p) => p.upgrade().unwrap().borrow().is_generated(),
+            Parent::ListChildData(p) => p.upgrade().unwrap().read().unwrap().is_generated(),
             _ => false,
         }
     }
