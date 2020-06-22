@@ -9,35 +9,35 @@ use super::util::*;
 use crate::model::container::Container;
 use crate::model::util::{Model, WithChildren};
 
-pub struct ContainerData<'a> {
-    pub parent: Option<Parent<'a>>,
-    pub model: &'a Container,
-    pub children: Option<Arc<RwLock<HashMap<String, Child<'a>>>>>,
+pub struct ContainerData {
+    pub parent: Option<Parent>,
+    pub model: Arc<Container>,
+    pub children: Option<Arc<RwLock<HashMap<String, Child>>>>,
     pub path: String,
 }
 
-type Link<'a> = Arc<RwLock<ContainerData<'a>>>;
+type Link = Arc<RwLock<ContainerData>>;
 
-pub struct ContainerInstance<'a>(Link<'a>);
+pub struct ContainerInstance(Link);
 
-impl<'a> Clone for ContainerInstance<'a> {
+impl Clone for ContainerInstance {
     fn clone(&self) -> Self {
         ContainerInstance(Arc::clone(&self.0))
     }
 }
 
-impl<'a> PartialEq for ContainerInstance<'a> {
-    fn eq(&self, other: &ContainerInstance<'a>) -> bool {
+impl PartialEq for ContainerInstance {
+    fn eq(&self, other: &ContainerInstance) -> bool {
         Arc::ptr_eq(&self.0, &other.0)
     }
 }
 
-pub fn parse_children<'a>(
-    model: &'a Container,
+pub fn parse_children(
+    model: Arc<Container>,
     value: &Value,
     parent_path: String,
-    parent: &Link<'a>,
-) -> HashMap<String, Child<'a>> {
+    parent: &Link,
+) -> HashMap<String, Child> {
     let mut children: HashMap<String, Child> = HashMap::new();
     let child_path = parent_path;
 
@@ -51,7 +51,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::LeafInstance(LeafInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             children_parent,
@@ -62,7 +62,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::ContainerInstance(ContainerInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             Some(children_parent),
@@ -73,7 +73,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::LeafListInstance(LeafListInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             children_parent,
@@ -84,7 +84,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::ListInstance(ListInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             children_parent,
@@ -98,18 +98,18 @@ pub fn parse_children<'a>(
     children
 }
 
-impl<'a> ContainerInstance<'a> {
+impl ContainerInstance {
     pub fn new(
-        model: &'a Container,
+        model: Arc<Container>,
         value: &Value,
         parent_path: String,
-        parent: Option<Parent<'a>>,
-    ) -> ContainerInstance<'a> {
+        parent: Option<Parent>,
+    ) -> ContainerInstance {
         let path = format!("{}/{}", parent_path, model.name);
         let child_path = path.clone();
 
         let instance = ContainerInstance(Arc::new(RwLock::new(ContainerData {
-            model,
+            model: model.clone(),
             children: None,
             path,
             parent,
@@ -125,7 +125,7 @@ impl<'a> ContainerInstance<'a> {
         instance
     }
 
-    pub fn visit(&self, f: &dyn Fn(&LeafInstance) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
         for child in self
             .0
             .read()

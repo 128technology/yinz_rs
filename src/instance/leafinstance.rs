@@ -1,22 +1,24 @@
 use serde_json::Value;
+use std::sync::Arc;
 
 use super::util::*;
 use crate::model::leaf::Leaf;
 
-pub struct LeafInstance<'a> {
-    pub parent: Parent<'a>,
-    pub model: &'a Leaf,
+pub struct LeafInstance {
+    pub parent: Parent,
+    pub model: Arc<Leaf>,
     pub value: String,
     pub path: String,
 }
 
-impl<'a> LeafInstance<'a> {
+impl LeafInstance {
     pub fn new(
-        model: &'a Leaf,
+        model: Arc<Leaf>,
         value: &Value,
         parent_path: String,
-        parent: Parent<'a>,
-    ) -> LeafInstance<'a> {
+        parent: Parent,
+    ) -> LeafInstance {
+        let name = &model.name;
         let value_str = match value {
             Value::String(x) => x.clone(),
             Value::Number(x) => x.to_string(),
@@ -25,21 +27,20 @@ impl<'a> LeafInstance<'a> {
         };
 
         LeafInstance {
-            model,
+            model: model.clone(),
             value: value_str,
-            path: format!("{}/{}", parent_path, model.name),
+            path: format!("{}/{}", parent_path, name),
             parent,
         }
     }
 
-    pub fn visit(&self, f: &dyn Fn(&LeafInstance) -> ()) {
-        f(self);
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
+        f(NodeToVisit::LeafInstance(self));
     }
+}
 
-    pub fn is_generated(&self) -> bool {
-        match &self.parent {
-            Parent::ListChildData(p) => p.upgrade().unwrap().read().unwrap().is_generated(),
-            _ => false,
-        }
+impl Generated for LeafInstance {
+    fn get_parent(&self) -> &Parent {
+        &self.parent
     }
 }

@@ -1,22 +1,24 @@
 use serde_json::Value;
+use std::sync::Arc;
 
 use super::containerinstance::ContainerInstance;
-use super::leafinstance::LeafInstance;
+use super::util::*;
 use crate::model::datamodel::DataModel;
 
-pub struct DataModelInstance<'a> {
-    pub root: ContainerInstance<'a>,
+pub struct DataModelInstance {
+    pub root: ContainerInstance,
 }
 
-impl<'a> DataModelInstance<'a> {
-    pub fn new(model: &'a DataModel, value: &Value) -> DataModelInstance<'a> {
+impl DataModelInstance {
+    pub fn new(model: Arc<DataModel>, value: &Value) -> DataModelInstance {
         let root_name = &model.root.name;
-        let root = ContainerInstance::new(&model.root, &value[root_name], "".to_string(), None);
+        let root =
+            ContainerInstance::new(model.root.clone(), &value[root_name], "".to_string(), None);
 
         DataModelInstance { root }
     }
 
-    pub fn visit(&self, f: &dyn Fn(&LeafInstance) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
         self.root.visit(f);
     }
 }

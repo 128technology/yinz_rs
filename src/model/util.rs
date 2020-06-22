@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
+use std::sync::Arc;
 use sxd_document::*;
 use sxd_xpath::nodeset::Node;
 use sxd_xpath::{Context, Factory, Value};
@@ -20,10 +21,10 @@ const YIN_NS: &str = "urn:ietf:params:xml:ns:yang:yin:1";
 
 #[derive(Debug, Clone)]
 pub enum Model {
-    Leaf(Leaf),
-    List(List),
-    Container(Container),
-    LeafList(LeafList),
+    Leaf(Arc<Leaf>),
+    List(Arc<List>),
+    Container(Arc<Container>),
+    LeafList(Arc<LeafList>),
 }
 
 #[derive(Debug)]
@@ -98,16 +99,16 @@ pub fn parse_children(el: dom::Element) -> HashMap<String, Model> {
             if let Some(c) = child {
                 match c {
                     Child::Leaf(x) => {
-                        children.insert(x.name.clone(), Model::Leaf(x));
+                        children.insert(x.name.clone(), Model::Leaf(Arc::new(x)));
                     }
                     Child::LeafList(x) => {
-                        children.insert(x.name.clone(), Model::LeafList(x));
+                        children.insert(x.name.clone(), Model::LeafList(Arc::new(x)));
                     }
                     Child::Container(x) => {
-                        children.insert(x.name.clone(), Model::Container(x));
+                        children.insert(x.name.clone(), Model::Container(Arc::new(x)));
                     }
                     Child::List(x) => {
-                        children.insert(x.name.clone(), Model::List(x));
+                        children.insert(x.name.clone(), Model::List(Arc::new(x)));
                     }
                     Child::Choice(x) => {
                         children.extend(x.children);
