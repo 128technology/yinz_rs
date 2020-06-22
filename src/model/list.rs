@@ -14,7 +14,7 @@ pub struct List {
 fn parse_keys(el: dom::Element) -> Vec<String> {
     let key_el = evaluate_get_yin_xpath("./yin:key", &el).expect("A list must have keys defined.");
     let key_attr_value = key_el.attribute("value").unwrap().value().to_string();
-    let key_split = key_attr_value.split(" ");
+    let key_split = key_attr_value.split(' ');
 
     key_split.map(|s| to_camel_case(s)).collect()
 }

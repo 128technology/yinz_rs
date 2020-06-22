@@ -4,8 +4,6 @@ version = "0.1.0"
 authors = ["Chris Main <cmain@128technology.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 sxd-document = "0.3.2"
 sxd-xpath = "0.4.2"
