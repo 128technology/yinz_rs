@@ -92,60 +92,44 @@ pub fn parse_children(el: dom::Element) -> HashMap<String, Model> {
     let mut children: HashMap<String, Model> = HashMap::new();
 
     for child in el.children() {
-        match child {
-            dom::ChildOfElement::Element(e) => {
-                let child = parse_child(e);
+        if let dom::ChildOfElement::Element(e) = child {
+            let child = parse_child(e);
 
-                match child {
-                    Some(c) => match c {
-                        Child::Leaf(x) => {
-                            children.insert(x.name.clone(), Model::Leaf(x));
-                        }
-                        Child::LeafList(x) => {
-                            children.insert(x.name.clone(), Model::LeafList(x));
-                        }
-                        Child::Container(x) => {
-                            children.insert(x.name.clone(), Model::Container(x));
-                        }
-                        Child::List(x) => {
-                            children.insert(x.name.clone(), Model::List(x));
-                        }
-                        Child::Choice(x) => {
-                            children.extend(x.children);
-                        }
-                    },
-                    None => (),
+            if let Some(c) = child {
+                match c {
+                    Child::Leaf(x) => {
+                        children.insert(x.name.clone(), Model::Leaf(x));
+                    }
+                    Child::LeafList(x) => {
+                        children.insert(x.name.clone(), Model::LeafList(x));
+                    }
+                    Child::Container(x) => {
+                        children.insert(x.name.clone(), Model::Container(x));
+                    }
+                    Child::List(x) => {
+                        children.insert(x.name.clone(), Model::List(x));
+                    }
+                    Child::Choice(x) => {
+                        children.extend(x.children);
+                    }
                 }
             }
-            _ => (),
         }
     }
 
-    return children;
+    children
 }
 
 pub fn parse_child(el: dom::Element) -> Option<Child> {
     let model_type = el.name().local_part();
 
     match model_type {
-        "leaf" => {
-            return Some(Child::Leaf(Leaf::new(el)));
-        }
-        "container" => {
-            return Some(Child::Container(Container::new(el)));
-        }
-        "list" => {
-            return Some(Child::List(List::new(el)));
-        }
-        "leaf-list" => {
-            return Some(Child::LeafList(LeafList::new(el)));
-        }
-        "choice" => {
-            return Some(Child::Choice(Choice::new(el)));
-        }
-        _ => {
-            return None;
-        }
+        "leaf" => Some(Child::Leaf(Leaf::new(el))),
+        "container" => Some(Child::Container(Container::new(el))),
+        "list" => Some(Child::List(List::new(el))),
+        "leaf-list" => Some(Child::LeafList(LeafList::new(el))),
+        "choice" => Some(Child::Choice(Choice::new(el))),
+        _ => None,
     }
 }
 
@@ -157,10 +141,10 @@ pub trait WithChildren {
         let has_exact_match = children.contains_key(name);
 
         if has_exact_match {
-            return children.get(name);
+            children.get(name)
         } else {
             let camel_case_name = to_camel_case(name);
-            return children.get(&camel_case_name);
+            children.get(&camel_case_name)
         }
     }
 }

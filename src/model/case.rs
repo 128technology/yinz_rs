@@ -17,8 +17,8 @@ fn parse_children_from_implicit_case(el: dom::Element) -> HashMap<String, Model>
     let child_option = parse_child(el);
     let mut children: HashMap<String, Model> = HashMap::new();
 
-    match child_option {
-        Some(c) => match c {
+    if let Some(c) = child_option {
+        match c {
             Child::Choice(c) => {
                 children = c.children;
             }
@@ -34,11 +34,10 @@ fn parse_children_from_implicit_case(el: dom::Element) -> HashMap<String, Model>
             Child::List(c) => {
                 children.insert(c.name.clone(), Model::List(c));
             }
-        },
-        None => (),
+        }
     }
 
-    return children;
+    children
 }
 
 impl Case {

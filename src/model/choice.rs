@@ -15,23 +15,20 @@ fn parse_cases(el: dom::Element) -> Vec<Case> {
     let mut cases: Vec<Case> = Vec::new();
 
     for child in el.children() {
-        match child {
-            dom::ChildOfElement::Element(e) => {
-                let model_type = e.name().local_part();
+        if let dom::ChildOfElement::Element(e) = child {
+            let model_type = e.name().local_part();
 
-                match model_type {
-                    "case" | "leaf" | "container" | "list" | "leaf-list" => {
-                        let case = Case::new(e);
-                        cases.push(case);
-                    }
-                    _ => (),
+            match model_type {
+                "case" | "leaf" | "container" | "list" | "leaf-list" => {
+                    let case = Case::new(e);
+                    cases.push(case);
                 }
+                _ => (),
             }
-            _ => (),
         }
     }
 
-    return cases;
+    cases
 }
 
 impl Choice {

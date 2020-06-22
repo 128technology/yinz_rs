@@ -42,67 +42,63 @@ pub fn parse_children<'a>(
     parent: &Link<'a>,
 ) -> HashMap<String, Child<'a>> {
     let mut children: HashMap<String, Child> = HashMap::new();
-    // TODO: Remove these clones
-    let child_path = parent_path.clone();
+    let child_path = parent_path;
 
-    match value {
-        Value::Object(x) => {
-            for (k, v) in x.iter() {
-                let children_parent = Parent::ListChildData(Arc::downgrade(parent));
-                let child_model = model.get_child(k).unwrap();
+    if let Value::Object(x) = value {
+        for (k, v) in x.iter() {
+            let children_parent = Parent::ListChildData(Arc::downgrade(parent));
+            let child_model = model.get_child(k).unwrap();
 
-                match child_model {
-                    Model::Leaf(m) => {
-                        children.insert(
-                            k.to_string(),
-                            Child::LeafInstance(LeafInstance::new(
-                                m,
-                                &v,
-                                child_path.clone(),
-                                children_parent,
-                            )),
-                        );
-                    }
-                    Model::Container(m) => {
-                        children.insert(
-                            k.to_string(),
-                            Child::ContainerInstance(ContainerInstance::new(
-                                m,
-                                &v,
-                                child_path.clone(),
-                                Some(children_parent),
-                            )),
-                        );
-                    }
-                    Model::LeafList(m) => {
-                        children.insert(
-                            k.to_string(),
-                            Child::LeafListInstance(LeafListInstance::new(
-                                m,
-                                &v,
-                                child_path.clone(),
-                                children_parent,
-                            )),
-                        );
-                    }
-                    Model::List(m) => {
-                        children.insert(
-                            k.to_string(),
-                            Child::ListInstance(ListInstance::new(
-                                m,
-                                &v,
-                                child_path.clone(),
-                                children_parent,
-                            )),
-                        );
-                    }
+            match child_model {
+                Model::Leaf(m) => {
+                    children.insert(
+                        k.to_string(),
+                        Child::LeafInstance(LeafInstance::new(
+                            m,
+                            &v,
+                            child_path.clone(),
+                            children_parent,
+                        )),
+                    );
+                }
+                Model::Container(m) => {
+                    children.insert(
+                        k.to_string(),
+                        Child::ContainerInstance(ContainerInstance::new(
+                            m,
+                            &v,
+                            child_path.clone(),
+                            Some(children_parent),
+                        )),
+                    );
+                }
+                Model::LeafList(m) => {
+                    children.insert(
+                        k.to_string(),
+                        Child::LeafListInstance(LeafListInstance::new(
+                            m,
+                            &v,
+                            child_path.clone(),
+                            children_parent,
+                        )),
+                    );
+                }
+                Model::List(m) => {
+                    children.insert(
+                        k.to_string(),
+                        Child::ListInstance(ListInstance::new(
+                            m,
+                            &v,
+                            child_path.clone(),
+                            children_parent,
+                        )),
+                    );
                 }
             }
         }
-        _ => {}
     }
 
-    return children;
+    children
 }
 
 pub fn get_key_value<'a>(model: &'a List, value: &Value) -> String {
@@ -192,13 +188,10 @@ impl<'a> ListChildInstance<'a> {
 impl<'a> ListChildData<'a> {
     pub fn is_generated(&self) -> bool {
         for child in self.children.as_ref().unwrap().read().unwrap().values() {
-            match child {
-                Child::LeafInstance(c) => {
-                    if c.model.name == "generated" && c.value == "true" {
-                        return true;
-                    }
+            if let Child::LeafInstance(c) = child {
+                if c.model.name == "generated" && c.value == "true" {
+                    return true;
                 }
-                _ => (),
             }
         }
 
