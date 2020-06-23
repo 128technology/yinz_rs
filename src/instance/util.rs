@@ -6,14 +6,30 @@ use super::leaflistinstance::LeafListInstance;
 use super::listchildinstance::ListChildData;
 use super::listinstance::ListInstance;
 
-pub enum Child<'a> {
-    ContainerInstance(ContainerInstance<'a>),
-    LeafInstance(LeafInstance<'a>),
-    LeafListInstance(LeafListInstance<'a>),
-    ListInstance(ListInstance<'a>),
+pub enum Child {
+    ContainerInstance(ContainerInstance),
+    LeafInstance(LeafInstance),
+    LeafListInstance(LeafListInstance),
+    ListInstance(ListInstance),
 }
 
-pub enum Parent<'a> {
-    ContainerData(Weak<RwLock<ContainerData<'a>>>),
-    ListChildData(Weak<RwLock<ListChildData<'a>>>),
+pub enum Parent {
+    ContainerData(Weak<RwLock<ContainerData>>),
+    ListChildData(Weak<RwLock<ListChildData>>),
+}
+
+pub enum NodeToVisit<'a> {
+    LeafListInstance(&'a LeafListInstance),
+    LeafInstance(&'a LeafInstance),
+}
+
+pub trait Generated {
+    fn get_parent(&self) -> &Parent;
+
+    fn is_generated(&self) -> bool {
+        match &self.get_parent() {
+            Parent::ListChildData(p) => p.upgrade().unwrap().read().unwrap().is_generated(),
+            _ => false,
+        }
+    }
 }

@@ -11,36 +11,36 @@ use super::util::*;
 use crate::model::list::List;
 use crate::model::util::{Model, WithChildren};
 
-pub struct ListChildData<'a> {
-    pub parent: Weak<RwLock<ListData<'a>>>,
-    pub model: &'a List,
-    pub children: Option<Arc<RwLock<HashMap<String, Child<'a>>>>>,
+pub struct ListChildData {
+    pub parent: Weak<RwLock<ListData>>,
+    pub model: Arc<List>,
+    pub children: Option<Arc<RwLock<HashMap<String, Child>>>>,
     pub path: String,
     pub key_value: String,
 }
 
-type Link<'a> = Arc<RwLock<ListChildData<'a>>>;
+type Link = Arc<RwLock<ListChildData>>;
 
-pub struct ListChildInstance<'a>(Link<'a>);
+pub struct ListChildInstance(Link);
 
-impl<'a> Clone for ListChildInstance<'a> {
+impl Clone for ListChildInstance {
     fn clone(&self) -> Self {
         ListChildInstance(Arc::clone(&self.0))
     }
 }
 
-impl<'a> PartialEq for ListChildInstance<'a> {
-    fn eq(&self, other: &ListChildInstance<'a>) -> bool {
+impl PartialEq for ListChildInstance {
+    fn eq(&self, other: &ListChildInstance) -> bool {
         Arc::ptr_eq(&self.0, &other.0)
     }
 }
 
-pub fn parse_children<'a>(
-    model: &'a List,
+pub fn parse_children(
+    model: Arc<List>,
     value: &Value,
     parent_path: String,
-    parent: &Link<'a>,
-) -> HashMap<String, Child<'a>> {
+    parent: &Link,
+) -> HashMap<String, Child> {
     let mut children: HashMap<String, Child> = HashMap::new();
     let child_path = parent_path;
 
@@ -54,7 +54,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::LeafInstance(LeafInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             children_parent,
@@ -65,7 +65,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::ContainerInstance(ContainerInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             Some(children_parent),
@@ -76,7 +76,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::LeafListInstance(LeafListInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             children_parent,
@@ -87,7 +87,7 @@ pub fn parse_children<'a>(
                     children.insert(
                         k.to_string(),
                         Child::ListInstance(ListInstance::new(
-                            m,
+                            m.clone(),
                             &v,
                             child_path.clone(),
                             children_parent,
@@ -101,7 +101,7 @@ pub fn parse_children<'a>(
     children
 }
 
-pub fn get_key_value<'a>(model: &'a List, value: &Value) -> String {
+pub fn get_key_value(model: Arc<List>, value: &Value) -> String {
     let mut key_values: Vec<String> = Vec::new();
 
     for key in &model.keys {
@@ -122,19 +122,19 @@ pub fn get_key_value<'a>(model: &'a List, value: &Value) -> String {
     key_values.join(",")
 }
 
-impl<'a> ListChildInstance<'a> {
+impl ListChildInstance {
     pub fn new(
-        model: &'a List,
+        model: Arc<List>,
         value: &Value,
         parent_path: String,
-        parent: Weak<RwLock<ListData<'a>>>,
-    ) -> ListChildInstance<'a> {
-        let key_value = get_key_value(model, value);
+        parent: Weak<RwLock<ListData>>,
+    ) -> ListChildInstance {
+        let key_value = get_key_value(model.clone(), value);
         let path = format!("{}={}", parent_path, key_value);
         let child_path = path.clone();
 
         let instance = ListChildInstance(Arc::new(RwLock::new(ListChildData {
-            model,
+            model: model.clone(),
             children: None,
             path,
             parent,
@@ -155,7 +155,7 @@ impl<'a> ListChildInstance<'a> {
         self.0.read().unwrap().key_value.to_string()
     }
 
-    pub fn visit(&self, f: &dyn Fn(&LeafInstance) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
         for child in self
             .0
             .read()
@@ -185,7 +185,7 @@ impl<'a> ListChildInstance<'a> {
     }
 }
 
-impl<'a> ListChildData<'a> {
+impl ListChildData {
     pub fn is_generated(&self) -> bool {
         for child in self.children.as_ref().unwrap().read().unwrap().values() {
             if let Child::LeafInstance(c) = child {

@@ -2,41 +2,40 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use super::leafinstance::LeafInstance;
 use super::listchildinstance::ListChildInstance;
 use super::util::*;
 use crate::model::list::List;
 
-pub struct ListData<'a> {
-    pub parent: Parent<'a>,
-    pub model: &'a List,
-    pub children: Option<Arc<RwLock<HashMap<String, ListChildInstance<'a>>>>>,
+pub struct ListData {
+    pub parent: Parent,
+    pub model: Arc<List>,
+    pub children: Option<Arc<RwLock<HashMap<String, ListChildInstance>>>>,
     pub path: String,
 }
 
-type Link<'a> = Arc<RwLock<ListData<'a>>>;
+type Link = Arc<RwLock<ListData>>;
 
-pub struct ListInstance<'a>(Link<'a>);
+pub struct ListInstance(Link);
 
-impl<'a> Clone for ListInstance<'a> {
+impl Clone for ListInstance {
     fn clone(&self) -> Self {
         ListInstance(Arc::clone(&self.0))
     }
 }
 
-impl<'a> PartialEq for ListInstance<'a> {
-    fn eq(&self, other: &ListInstance<'a>) -> bool {
+impl PartialEq for ListInstance {
+    fn eq(&self, other: &ListInstance) -> bool {
         Arc::ptr_eq(&self.0, &other.0)
     }
 }
 
-impl<'a> ListInstance<'a> {
+impl ListInstance {
     pub fn new(
-        model: &'a List,
+        model: Arc<List>,
         value: &Value,
         parent_path: String,
-        parent: Parent<'a>,
-    ) -> ListInstance<'a> {
+        parent: Parent,
+    ) -> ListInstance {
         let value_arr = match value {
             Value::Array(x) => x,
             _ => panic!("List must have an array value!"),
@@ -46,7 +45,7 @@ impl<'a> ListInstance<'a> {
         let child_path = path.clone();
 
         let instance = ListInstance(Arc::new(RwLock::new(ListData {
-            model,
+            model: model.clone(),
             children: None,
             path,
             parent,
@@ -56,8 +55,12 @@ impl<'a> ListInstance<'a> {
 
         for list_value in value_arr.iter() {
             let children_parent = Arc::downgrade(&instance.0);
-            let child_instance =
-                ListChildInstance::new(model, list_value, child_path.clone(), children_parent);
+            let child_instance = ListChildInstance::new(
+                model.clone(),
+                list_value,
+                child_path.clone(),
+                children_parent,
+            );
             children.insert(child_instance.get_key(), child_instance);
         }
 
@@ -66,7 +69,7 @@ impl<'a> ListInstance<'a> {
         instance
     }
 
-    pub fn visit(&self, f: &dyn Fn(&LeafInstance) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
         for child in self
             .0
             .read()

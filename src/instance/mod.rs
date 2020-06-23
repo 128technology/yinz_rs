@@ -7,5 +7,4 @@ pub mod listchildinstance;
 pub mod listinstance;
 mod util;
 
-pub use self::util::Child;
-pub use self::util::Parent;
+pub use self::util::{Child, Generated, NodeToVisit, Parent};
