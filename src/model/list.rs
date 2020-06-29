@@ -34,3 +34,37 @@ impl WithChildren for List {
         &self.children
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::model::util::*;
+
+    const MODEL: &str = r#"<?xml version="1.0"?>
+    <yin:list name="peer" xmlns:yin="urn:ietf:params:xml:ns:yang:yin:1">
+        <yin:key value="name"/>
+        <yin:leaf name="name">
+            <yin:type name="string"/>
+        </yin:leaf>
+    </yin:list>"#;
+
+    #[test]
+    fn it_parses_name() {
+        let pkg = get_package(MODEL);
+        let model = super::List::new(get_root_el(&pkg));
+        assert_eq!(model.name, "peer");
+    }
+
+    #[test]
+    fn it_parses_keys() {
+        let pkg = get_package(MODEL);
+        let model = super::List::new(get_root_el(&pkg));
+        assert_eq!(model.keys, vec!["name"]);
+    }
+
+    #[test]
+    fn it_parses_children() {
+        let pkg = get_package(MODEL);
+        let model = super::List::new(get_root_el(&pkg));
+        assert_eq!(model.children.len(), 1);
+    }
+}

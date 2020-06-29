@@ -23,3 +23,36 @@ impl WithChildren for Container {
         &self.children
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::model::util::*;
+
+    const MODEL: &str = r#"<?xml version="1.0"?>
+    <yin:container name="bfd" xmlns:yin="urn:ietf:params:xml:ns:yang:yin:1">
+        <yin:leaf name="state">
+            <yin:type name="enumeration">
+                <yin:enum name="enabled"/>
+                <yin:enum name="disabled"/>
+            </yin:type>
+            <yin:default value="enabled"/>
+        </yin:leaf>
+        <yin:leaf name="desired-tx-interval">
+            <yin:type name="uint32"/>
+        </yin:leaf>
+    </yin:container>"#;
+
+    #[test]
+    fn it_parses_name() {
+        let pkg = get_package(MODEL);
+        let model = super::Container::new(get_root_el(&pkg));
+        assert_eq!(model.name, "bfd");
+    }
+
+    #[test]
+    fn it_parses_children() {
+        let pkg = get_package(MODEL);
+        let model = super::Container::new(get_root_el(&pkg));
+        assert_eq!(model.children.len(), 2);
+    }
+}
