@@ -121,6 +121,17 @@ pub fn parse_children(el: dom::Element) -> HashMap<String, Model> {
     children
 }
 
+pub fn get_root_el(package: &Package) -> dom::Element {
+    match package.as_document().root().children()[0] {
+        dom::ChildOfRoot::Element(x) => x,
+        _ => panic!("Root must be an element."),
+    }
+}
+
+pub fn get_package(xml_str: &str) -> Package {
+    parser::parse(xml_str).expect("Failed to parse")
+}
+
 pub fn parse_child(el: dom::Element) -> Option<Child> {
     let model_type = el.name().local_part();
 

@@ -47,3 +47,48 @@ impl Choice {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::model::util::*;
+
+    const MODEL: &str = r#"<?xml version="1.0"?>
+    <yin:choice name="foo" xmlns:yin="urn:ietf:params:xml:ns:yang:yin:1">
+        <yin:leaf name="implicit">
+            <yin:type name="string"/>
+        </yin:leaf>
+        <yin:case name="explicit">
+            <yin:leaf name="bar">
+                <yin:type name="string"/>
+            </yin:leaf>>
+        </yin:case>
+    </yin:choice>"#;
+
+    #[test]
+    fn it_parses_name() {
+        let pkg = get_package(MODEL);
+        let model = super::Choice::new(get_root_el(&pkg));
+        assert_eq!(model.name, "foo");
+    }
+
+    #[test]
+    fn it_parses_implicit_child() {
+        let pkg = get_package(MODEL);
+        let model = super::Choice::new(get_root_el(&pkg));
+        assert!(model.children.get("implicit").is_some());
+    }
+
+    #[test]
+    fn it_parses_explicit_child() {
+        let pkg = get_package(MODEL);
+        let model = super::Choice::new(get_root_el(&pkg));
+        assert!(model.children.get("bar").is_some());
+    }
+
+    #[test]
+    fn it_parses_cases() {
+        let pkg = get_package(MODEL);
+        let model = super::Choice::new(get_root_el(&pkg));
+        assert_eq!(model.cases.len(), 2);
+    }
+}

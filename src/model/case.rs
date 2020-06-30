@@ -55,3 +55,48 @@ impl Case {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::model::util::*;
+
+    const EXPLICT_MODEL: &str = r#"<?xml version="1.0"?>
+    <yin:case name="explicit" xmlns:yin="urn:ietf:params:xml:ns:yang:yin:1">
+        <yin:leaf name="bar">
+            <yin:type name="string"/>
+        </yin:leaf>
+    </yin:case>"#;
+
+    const IMPLICIT_MODEL: &str = r#"<?xml version="1.0"?>
+    <yin:leaf name="bar" xmlns:yin="urn:ietf:params:xml:ns:yang:yin:1">
+        <yin:type name="string"/>
+    </yin:leaf>"#;
+
+    #[test]
+    fn it_parses_name_explicit() {
+        let pkg = get_package(EXPLICT_MODEL);
+        let model = super::Case::new(get_root_el(&pkg));
+        assert_eq!(model.name, "explicit");
+    }
+
+    #[test]
+    fn it_parses_name_implicit() {
+        let pkg = get_package(IMPLICIT_MODEL);
+        let model = super::Case::new(get_root_el(&pkg));
+        assert_eq!(model.name, "bar");
+    }
+
+    #[test]
+    fn it_parses_children_explicit() {
+        let pkg = get_package(EXPLICT_MODEL);
+        let model = super::Case::new(get_root_el(&pkg));
+        assert!(model.children.get("bar").is_some());
+    }
+
+    #[test]
+    fn it_parses_children_implicit() {
+        let pkg = get_package(IMPLICIT_MODEL);
+        let model = super::Case::new(get_root_el(&pkg));
+        assert!(model.children.get("bar").is_some());
+    }
+}
