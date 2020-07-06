@@ -9,17 +9,10 @@ pub struct LeafListInstance {
     pub parent: Parent,
     pub model: Arc<LeafList>,
     pub children: Vec<LeafListChildInstance>,
-    pub path: String,
 }
 
 impl LeafListInstance {
-    pub fn new(
-        model: Arc<LeafList>,
-        value: &Value,
-        parent_path: String,
-        parent: Parent,
-    ) -> LeafListInstance {
-        let name = &model.name;
+    pub fn new(model: Arc<LeafList>, value: &Value, parent: Parent) -> LeafListInstance {
         let value_arr = match value {
             Value::Array(x) => x,
             _ => panic!("Leaf list must have an array value!"),
@@ -32,11 +25,19 @@ impl LeafListInstance {
         }
 
         LeafListInstance {
-            model: model.clone(),
+            model,
             children,
-            path: format!("{}/{}", parent_path, name),
             parent,
         }
+    }
+
+    pub fn get_path(&self) -> String {
+        let parent_path = match &self.parent {
+            Parent::ContainerData(x) => x.upgrade().unwrap().read().unwrap().path.clone(),
+            Parent::ListChildData(x) => x.upgrade().unwrap().read().unwrap().path.clone(),
+        };
+
+        format!("{}/{}", parent_path, self.model.name)
     }
 
     pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
