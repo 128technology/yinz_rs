@@ -25,7 +25,7 @@ impl LeafListInstance {
         }
 
         LeafListInstance {
-            model: model.clone(),
+            model,
             children,
             parent,
         }

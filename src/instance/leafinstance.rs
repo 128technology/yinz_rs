@@ -20,7 +20,7 @@ impl LeafInstance {
         };
 
         LeafInstance {
-            model: model.clone(),
+            model,
             value: value_str,
             parent,
         }
