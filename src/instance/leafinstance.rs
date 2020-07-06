@@ -8,17 +8,10 @@ pub struct LeafInstance {
     pub parent: Parent,
     pub model: Arc<Leaf>,
     pub value: String,
-    pub path: String,
 }
 
 impl LeafInstance {
-    pub fn new(
-        model: Arc<Leaf>,
-        value: &Value,
-        parent_path: String,
-        parent: Parent,
-    ) -> LeafInstance {
-        let name = &model.name;
+    pub fn new(model: Arc<Leaf>, value: &Value, parent: Parent) -> LeafInstance {
         let value_str = match value {
             Value::String(x) => x.clone(),
             Value::Number(x) => x.to_string(),
@@ -29,9 +22,17 @@ impl LeafInstance {
         LeafInstance {
             model: model.clone(),
             value: value_str,
-            path: format!("{}/{}", parent_path, name),
             parent,
         }
+    }
+
+    pub fn get_path(&self) -> String {
+        let parent_path = match &self.parent {
+            Parent::ContainerData(x) => x.upgrade().unwrap().read().unwrap().path.clone(),
+            Parent::ListChildData(x) => x.upgrade().unwrap().read().unwrap().path.clone(),
+        };
+
+        format!("{}/{}", parent_path, self.model.name)
     }
 
     pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {

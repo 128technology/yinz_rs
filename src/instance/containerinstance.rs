@@ -50,12 +50,7 @@ pub fn parse_children(
                 Model::Leaf(m) => {
                     children.insert(
                         k.to_string(),
-                        Child::LeafInstance(LeafInstance::new(
-                            m.clone(),
-                            &v,
-                            child_path.clone(),
-                            children_parent,
-                        )),
+                        Child::LeafInstance(LeafInstance::new(m.clone(), &v, children_parent)),
                     );
                 }
                 Model::Container(m) => {
@@ -75,7 +70,6 @@ pub fn parse_children(
                         Child::LeafListInstance(LeafListInstance::new(
                             m.clone(),
                             &v,
-                            child_path.clone(),
                             children_parent,
                         )),
                     );
