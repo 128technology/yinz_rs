@@ -1,6 +1,8 @@
 use serde_json::Value;
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
+use ustr::{ustr, UstrMap};
 
 use super::leafinstance::LeafInstance;
 use super::leaflistinstance::LeafListInstance;
@@ -12,77 +14,64 @@ use crate::model::util::{Model, WithChildren};
 pub struct ContainerData {
     pub parent: Option<Parent>,
     pub model: Arc<Container>,
-    pub children: Option<Arc<RwLock<HashMap<String, Child>>>>,
-    pub path: String,
+    pub children: Option<Rc<RefCell<UstrMap<Child>>>>,
 }
 
-type Link = Arc<RwLock<ContainerData>>;
+type Link = Rc<RefCell<ContainerData>>;
 
 pub struct ContainerInstance(Link);
 
 impl Clone for ContainerInstance {
     fn clone(&self) -> Self {
-        ContainerInstance(Arc::clone(&self.0))
+        ContainerInstance(Rc::clone(&self.0))
     }
 }
 
 impl PartialEq for ContainerInstance {
     fn eq(&self, other: &ContainerInstance) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
+        Rc::ptr_eq(&self.0, &other.0)
     }
 }
 
-pub fn parse_children(
-    model: Arc<Container>,
-    value: &Value,
-    parent_path: String,
-    parent: &Link,
-) -> HashMap<String, Child> {
-    let mut children: HashMap<String, Child> = HashMap::new();
-    let child_path = parent_path;
+pub fn parse_children(model: Arc<Container>, value: Value, parent: &Link) -> UstrMap<Child> {
+    let mut children: UstrMap<Child> = UstrMap::default();
 
     if let Value::Object(x) = value {
-        for (k, v) in x.iter() {
-            let child_model = model.get_child(k).unwrap();
-            let children_parent = Parent::ContainerData(Arc::downgrade(parent));
+        for (k, v) in x.into_iter() {
+            let child_model = model.get_child(&k).unwrap();
+            let children_parent = Parent::ContainerData(Rc::downgrade(parent));
 
             match child_model {
                 Model::Leaf(m) => {
                     children.insert(
-                        k.to_string(),
-                        Child::LeafInstance(LeafInstance::new(m.clone(), &v, children_parent)),
+                        ustr(&k),
+                        Child::LeafInstance(LeafInstance::new(m.clone(), v, children_parent)),
                     );
                 }
                 Model::Container(m) => {
                     children.insert(
-                        k.to_string(),
+                        ustr(&k),
                         Child::ContainerInstance(ContainerInstance::new(
                             m.clone(),
-                            &v,
-                            child_path.clone(),
+                            v,
                             Some(children_parent),
                         )),
                     );
                 }
                 Model::LeafList(m) => {
                     children.insert(
-                        k.to_string(),
+                        ustr(&k),
                         Child::LeafListInstance(LeafListInstance::new(
                             m.clone(),
-                            &v,
+                            v,
                             children_parent,
                         )),
                     );
                 }
                 Model::List(m) => {
                     children.insert(
-                        k.to_string(),
-                        Child::ListInstance(ListInstance::new(
-                            m.clone(),
-                            &v,
-                            child_path.clone(),
-                            children_parent,
-                        )),
+                        ustr(&k),
+                        Child::ListInstance(ListInstance::new(m.clone(), v, children_parent)),
                     );
                 }
             }
@@ -93,44 +82,24 @@ pub fn parse_children(
 }
 
 impl ContainerInstance {
-    pub fn new(
-        model: Arc<Container>,
-        value: &Value,
-        parent_path: String,
-        parent: Option<Parent>,
-    ) -> ContainerInstance {
-        let path = format!("{}/{}", parent_path, model.name);
-        let child_path = path.clone();
-
-        let instance = ContainerInstance(Arc::new(RwLock::new(ContainerData {
+    pub fn new(model: Arc<Container>, value: Value, parent: Option<Parent>) -> ContainerInstance {
+        let instance = ContainerInstance(Rc::new(RefCell::new(ContainerData {
             model: model.clone(),
             children: None,
-            path,
             parent,
         })));
 
-        instance.0.write().unwrap().children = Some(Arc::new(RwLock::new(parse_children(
+        instance.0.borrow_mut().children = Some(Rc::new(RefCell::new(parse_children(
             model,
             value,
-            child_path,
             &instance.0,
         ))));
 
         instance
     }
 
-    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
-        for child in self
-            .0
-            .read()
-            .unwrap()
-            .children
-            .as_ref()
-            .unwrap()
-            .read()
-            .unwrap()
-            .values()
-        {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit)) {
+        for child in self.0.borrow().children.as_ref().unwrap().borrow().values() {
             match child {
                 Child::ContainerInstance(c) => {
                     c.visit(f);
@@ -146,5 +115,19 @@ impl ContainerInstance {
                 }
             }
         }
+    }
+}
+
+impl ContainerData {
+    pub fn get_path(&self) -> String {
+        let parent_path = match &self.parent {
+            Some(p) => match p {
+                Parent::ContainerData(x) => x.upgrade().unwrap().borrow().get_path(),
+                Parent::ListChildData(x) => x.upgrade().unwrap().borrow().get_path(),
+            },
+            None => "".to_string(),
+        };
+
+        format!("{}/{}", parent_path, self.model.name)
     }
 }

@@ -10,15 +10,14 @@ pub struct DataModelInstance {
 }
 
 impl DataModelInstance {
-    pub fn new(model: Arc<DataModel>, value: &Value) -> DataModelInstance {
+    pub fn new(model: Arc<DataModel>, mut value: Value) -> DataModelInstance {
         let root_name = &model.root.name;
-        let root =
-            ContainerInstance::new(model.root.clone(), &value[root_name], "".to_string(), None);
+        let root = ContainerInstance::new(model.root.clone(), value[root_name].take(), None);
 
         DataModelInstance { root }
     }
 
-    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit)) {
         self.root.visit(f);
     }
 }
@@ -71,7 +70,7 @@ mod tests {
         let pkg = get_package(DATA_MODEL);
         let data_model = Arc::new(DataModel::new(get_root_el(&pkg)));
         let v: Value = from_str(INSTANCE).unwrap();
-        let instance = super::DataModelInstance::new(data_model, &v);
+        let instance = super::DataModelInstance::new(data_model, v);
 
         let count = Cell::new(0);
         let visitor = |node: NodeToVisit| match node {

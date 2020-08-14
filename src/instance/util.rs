@@ -1,4 +1,5 @@
-use std::sync::{RwLock, Weak};
+use std::cell::RefCell;
+use std::rc::Weak;
 
 use super::containerinstance::{ContainerData, ContainerInstance};
 use super::leafinstance::LeafInstance;
@@ -14,8 +15,8 @@ pub enum Child {
 }
 
 pub enum Parent {
-    ContainerData(Weak<RwLock<ContainerData>>),
-    ListChildData(Weak<RwLock<ListChildData>>),
+    ContainerData(Weak<RefCell<ContainerData>>),
+    ListChildData(Weak<RefCell<ListChildData>>),
 }
 
 pub enum NodeToVisit<'a> {
@@ -28,7 +29,7 @@ pub trait Generated {
 
     fn is_generated(&self) -> bool {
         match &self.get_parent() {
-            Parent::ListChildData(p) => p.upgrade().unwrap().read().unwrap().is_generated(),
+            Parent::ListChildData(p) => p.upgrade().unwrap().borrow().is_generated(),
             _ => false,
         }
     }
