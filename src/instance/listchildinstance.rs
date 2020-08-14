@@ -36,45 +36,45 @@ impl PartialEq for ListChildInstance {
     }
 }
 
-pub fn parse_children(model: Arc<List>, value: &Value, parent: &Link) -> UstrMap<Child> {
+pub fn parse_children(model: Arc<List>, value: Value, parent: &Link) -> UstrMap<Child> {
     let mut children: UstrMap<Child> = UstrMap::default();
 
     if let Value::Object(x) = value {
-        for (k, v) in x.iter() {
+        for (k, v) in x.into_iter() {
             let children_parent = Parent::ListChildData(Rc::downgrade(parent));
-            let child_model = model.get_child(k).unwrap();
+            let child_model = model.get_child(&k).unwrap();
 
             match child_model {
                 Model::Leaf(m) => {
                     children.insert(
-                        ustr(k),
-                        Child::LeafInstance(LeafInstance::new(m.clone(), &v, children_parent)),
+                        ustr(&k),
+                        Child::LeafInstance(LeafInstance::new(m.clone(), v, children_parent)),
                     );
                 }
                 Model::Container(m) => {
                     children.insert(
-                        ustr(k),
+                        ustr(&k),
                         Child::ContainerInstance(ContainerInstance::new(
                             m.clone(),
-                            &v,
+                            v,
                             Some(children_parent),
                         )),
                     );
                 }
                 Model::LeafList(m) => {
                     children.insert(
-                        ustr(k),
+                        ustr(&k),
                         Child::LeafListInstance(LeafListInstance::new(
                             m.clone(),
-                            &v,
+                            v,
                             children_parent,
                         )),
                     );
                 }
                 Model::List(m) => {
                     children.insert(
-                        ustr(k),
-                        Child::ListInstance(ListInstance::new(m.clone(), &v, children_parent)),
+                        ustr(&k),
+                        Child::ListInstance(ListInstance::new(m.clone(), v, children_parent)),
                     );
                 }
             }
@@ -88,7 +88,7 @@ pub fn get_key_value(model: Arc<List>, value: &Value) -> String {
     let mut key_values: Vec<String> = Vec::new();
 
     for key in &model.keys {
-        let key_value = match &value[key] {
+        let key_value = match value[key] {
             Value::Null => &value[to_kebab_case(key)],
             _ => &value[key],
         };
@@ -108,10 +108,10 @@ pub fn get_key_value(model: Arc<List>, value: &Value) -> String {
 impl ListChildInstance {
     pub fn new(
         model: Arc<List>,
-        value: &Value,
+        value: Value,
         parent: Weak<RefCell<ListData>>,
     ) -> ListChildInstance {
-        let key_value = get_key_value(model.clone(), value);
+        let key_value = get_key_value(model.clone(), &value);
 
         let instance = ListChildInstance(Rc::new(RefCell::new(ListChildData {
             model: model.clone(),

@@ -31,7 +31,7 @@ impl PartialEq for ListInstance {
 }
 
 impl ListInstance {
-    pub fn new(model: Arc<List>, value: &Value, parent: Parent) -> ListInstance {
+    pub fn new(model: Arc<List>, value: Value, parent: Parent) -> ListInstance {
         let value_arr = match value {
             Value::Array(x) => x,
             _ => panic!("List must have an array value!"),
@@ -45,7 +45,7 @@ impl ListInstance {
 
         let mut children: HashMap<String, ListChildInstance> = HashMap::new();
 
-        for list_value in value_arr.iter() {
+        for list_value in value_arr.into_iter() {
             let children_parent = Rc::downgrade(&instance.0);
             let child_instance = ListChildInstance::new(model.clone(), list_value, children_parent);
             children.insert(child_instance.get_key(), child_instance);

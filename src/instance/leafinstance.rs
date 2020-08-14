@@ -11,7 +11,7 @@ pub struct LeafInstance {
 }
 
 impl LeafInstance {
-    pub fn new(model: Arc<Leaf>, value: &Value, parent: Parent) -> LeafInstance {
+    pub fn new(model: Arc<Leaf>, value: Value, parent: Parent) -> LeafInstance {
         let value_str = match value {
             Value::String(x) => x.clone(),
             Value::Number(x) => x.to_string(),

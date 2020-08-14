@@ -12,7 +12,7 @@ pub struct LeafListInstance {
 }
 
 impl LeafListInstance {
-    pub fn new(model: Arc<LeafList>, value: &Value, parent: Parent) -> LeafListInstance {
+    pub fn new(model: Arc<LeafList>, value: Value, parent: Parent) -> LeafListInstance {
         let value_arr = match value {
             Value::Array(x) => x,
             _ => panic!("Leaf list must have an array value!"),
