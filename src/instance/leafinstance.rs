@@ -28,8 +28,8 @@ impl LeafInstance {
 
     pub fn get_path(&self) -> String {
         let parent_path = match &self.parent {
-            Parent::ContainerData(x) => x.upgrade().unwrap().read().unwrap().path.clone(),
-            Parent::ListChildData(x) => x.upgrade().unwrap().read().unwrap().path.clone(),
+            Parent::ContainerData(x) => x.upgrade().unwrap().borrow().path.clone(),
+            Parent::ListChildData(x) => x.upgrade().unwrap().borrow().path.clone(),
         };
 
         format!("{}/{}", parent_path, self.model.name)
