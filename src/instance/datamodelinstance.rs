@@ -17,7 +17,7 @@ impl DataModelInstance {
         DataModelInstance { root }
     }
 
-    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit)) {
         self.root.visit(f);
     }
 }

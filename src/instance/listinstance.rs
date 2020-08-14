@@ -56,7 +56,7 @@ impl ListInstance {
         instance
     }
 
-    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit)) {
         for child in self.0.borrow().children.as_ref().unwrap().borrow().values() {
             child.visit(f);
         }

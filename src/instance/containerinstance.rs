@@ -98,7 +98,7 @@ impl ContainerInstance {
         instance
     }
 
-    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit)) {
         for child in self.0.borrow().children.as_ref().unwrap().borrow().values() {
             match child {
                 Child::ContainerInstance(c) => {

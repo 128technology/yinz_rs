@@ -40,7 +40,7 @@ impl LeafListInstance {
         format!("{}/{}", parent_path, self.model.name)
     }
 
-    pub fn visit(&self, f: &dyn Fn(NodeToVisit) -> ()) {
+    pub fn visit(&self, f: &dyn Fn(NodeToVisit)) {
         f(NodeToVisit::LeafListInstance(self));
     }
 }
