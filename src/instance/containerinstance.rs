@@ -1,8 +1,8 @@
 use serde_json::Value;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use ustr::{ustr, UstrMap};
 
 use super::leafinstance::LeafInstance;
 use super::leaflistinstance::LeafListInstance;
@@ -14,7 +14,7 @@ use crate::model::util::{Model, WithChildren};
 pub struct ContainerData {
     pub parent: Option<Parent>,
     pub model: Arc<Container>,
-    pub children: Option<Rc<RefCell<HashMap<String, Child>>>>,
+    pub children: Option<Rc<RefCell<UstrMap<Child>>>>,
     pub path: String,
 }
 
@@ -39,8 +39,8 @@ pub fn parse_children(
     value: &Value,
     parent_path: String,
     parent: &Link,
-) -> HashMap<String, Child> {
-    let mut children: HashMap<String, Child> = HashMap::new();
+) -> UstrMap<Child> {
+    let mut children: UstrMap<Child> = UstrMap::default();
     let child_path = parent_path;
 
     if let Value::Object(x) = value {
@@ -51,13 +51,13 @@ pub fn parse_children(
             match child_model {
                 Model::Leaf(m) => {
                     children.insert(
-                        k.to_string(),
+                        ustr(k),
                         Child::LeafInstance(LeafInstance::new(m.clone(), &v, children_parent)),
                     );
                 }
                 Model::Container(m) => {
                     children.insert(
-                        k.to_string(),
+                        ustr(k),
                         Child::ContainerInstance(ContainerInstance::new(
                             m.clone(),
                             &v,
@@ -68,7 +68,7 @@ pub fn parse_children(
                 }
                 Model::LeafList(m) => {
                     children.insert(
-                        k.to_string(),
+                        ustr(k),
                         Child::LeafListInstance(LeafListInstance::new(
                             m.clone(),
                             &v,
@@ -78,7 +78,7 @@ pub fn parse_children(
                 }
                 Model::List(m) => {
                     children.insert(
-                        k.to_string(),
+                        ustr(k),
                         Child::ListInstance(ListInstance::new(
                             m.clone(),
                             &v,
