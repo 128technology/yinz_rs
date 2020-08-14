@@ -12,7 +12,6 @@ pub struct ListData {
     pub parent: Parent,
     pub model: Arc<List>,
     pub children: Option<Rc<RefCell<HashMap<String, ListChildInstance>>>>,
-    pub path: String,
 }
 
 type Link = Rc<RefCell<ListData>>;
@@ -32,24 +31,15 @@ impl PartialEq for ListInstance {
 }
 
 impl ListInstance {
-    pub fn new(
-        model: Arc<List>,
-        value: &Value,
-        parent_path: String,
-        parent: Parent,
-    ) -> ListInstance {
+    pub fn new(model: Arc<List>, value: &Value, parent: Parent) -> ListInstance {
         let value_arr = match value {
             Value::Array(x) => x,
             _ => panic!("List must have an array value!"),
         };
 
-        let path = format!("{}/{}", parent_path, model.name);
-        let child_path = path.clone();
-
         let instance = ListInstance(Rc::new(RefCell::new(ListData {
             model: model.clone(),
             children: None,
-            path,
             parent,
         })));
 
@@ -57,12 +47,7 @@ impl ListInstance {
 
         for list_value in value_arr.iter() {
             let children_parent = Rc::downgrade(&instance.0);
-            let child_instance = ListChildInstance::new(
-                model.clone(),
-                list_value,
-                child_path.clone(),
-                children_parent,
-            );
+            let child_instance = ListChildInstance::new(model.clone(), list_value, children_parent);
             children.insert(child_instance.get_key(), child_instance);
         }
 
@@ -75,5 +60,16 @@ impl ListInstance {
         for child in self.0.borrow().children.as_ref().unwrap().borrow().values() {
             child.visit(f);
         }
+    }
+}
+
+impl ListData {
+    pub fn get_path(&self) -> String {
+        let parent_path = match &self.parent {
+            Parent::ContainerData(x) => x.upgrade().unwrap().borrow().get_path(),
+            Parent::ListChildData(x) => x.upgrade().unwrap().borrow().get_path(),
+        };
+
+        format!("{}/{}", parent_path, self.model.name)
     }
 }

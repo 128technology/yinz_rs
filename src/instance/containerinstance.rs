@@ -15,7 +15,6 @@ pub struct ContainerData {
     pub parent: Option<Parent>,
     pub model: Arc<Container>,
     pub children: Option<Rc<RefCell<UstrMap<Child>>>>,
-    pub path: String,
 }
 
 type Link = Rc<RefCell<ContainerData>>;
@@ -34,14 +33,8 @@ impl PartialEq for ContainerInstance {
     }
 }
 
-pub fn parse_children(
-    model: Arc<Container>,
-    value: &Value,
-    parent_path: String,
-    parent: &Link,
-) -> UstrMap<Child> {
+pub fn parse_children(model: Arc<Container>, value: &Value, parent: &Link) -> UstrMap<Child> {
     let mut children: UstrMap<Child> = UstrMap::default();
-    let child_path = parent_path;
 
     if let Value::Object(x) = value {
         for (k, v) in x.iter() {
@@ -61,7 +54,6 @@ pub fn parse_children(
                         Child::ContainerInstance(ContainerInstance::new(
                             m.clone(),
                             &v,
-                            child_path.clone(),
                             Some(children_parent),
                         )),
                     );
@@ -79,12 +71,7 @@ pub fn parse_children(
                 Model::List(m) => {
                     children.insert(
                         ustr(k),
-                        Child::ListInstance(ListInstance::new(
-                            m.clone(),
-                            &v,
-                            child_path.clone(),
-                            children_parent,
-                        )),
+                        Child::ListInstance(ListInstance::new(m.clone(), &v, children_parent)),
                     );
                 }
             }
@@ -95,26 +82,16 @@ pub fn parse_children(
 }
 
 impl ContainerInstance {
-    pub fn new(
-        model: Arc<Container>,
-        value: &Value,
-        parent_path: String,
-        parent: Option<Parent>,
-    ) -> ContainerInstance {
-        let path = format!("{}/{}", parent_path, model.name);
-        let child_path = path.clone();
-
+    pub fn new(model: Arc<Container>, value: &Value, parent: Option<Parent>) -> ContainerInstance {
         let instance = ContainerInstance(Rc::new(RefCell::new(ContainerData {
             model: model.clone(),
             children: None,
-            path,
             parent,
         })));
 
         instance.0.borrow_mut().children = Some(Rc::new(RefCell::new(parse_children(
             model,
             value,
-            child_path,
             &instance.0,
         ))));
 
@@ -138,5 +115,19 @@ impl ContainerInstance {
                 }
             }
         }
+    }
+}
+
+impl ContainerData {
+    pub fn get_path(&self) -> String {
+        let parent_path = match &self.parent {
+            Some(p) => match p {
+                Parent::ContainerData(x) => x.upgrade().unwrap().borrow().get_path(),
+                Parent::ListChildData(x) => x.upgrade().unwrap().borrow().get_path(),
+            },
+            None => "".to_string(),
+        };
+
+        format!("{}/{}", parent_path, self.model.name)
     }
 }

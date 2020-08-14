@@ -12,8 +12,7 @@ pub struct DataModelInstance {
 impl DataModelInstance {
     pub fn new(model: Arc<DataModel>, value: &Value) -> DataModelInstance {
         let root_name = &model.root.name;
-        let root =
-            ContainerInstance::new(model.root.clone(), &value[root_name], "".to_string(), None);
+        let root = ContainerInstance::new(model.root.clone(), &value[root_name], None);
 
         DataModelInstance { root }
     }

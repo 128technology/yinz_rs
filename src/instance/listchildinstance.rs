@@ -17,7 +17,6 @@ pub struct ListChildData {
     pub parent: Weak<RefCell<ListData>>,
     pub model: Arc<List>,
     pub children: Option<Rc<RefCell<UstrMap<Child>>>>,
-    pub path: String,
     pub key_value: String,
 }
 
@@ -37,14 +36,8 @@ impl PartialEq for ListChildInstance {
     }
 }
 
-pub fn parse_children(
-    model: Arc<List>,
-    value: &Value,
-    parent_path: String,
-    parent: &Link,
-) -> UstrMap<Child> {
+pub fn parse_children(model: Arc<List>, value: &Value, parent: &Link) -> UstrMap<Child> {
     let mut children: UstrMap<Child> = UstrMap::default();
-    let child_path = parent_path;
 
     if let Value::Object(x) = value {
         for (k, v) in x.iter() {
@@ -64,7 +57,6 @@ pub fn parse_children(
                         Child::ContainerInstance(ContainerInstance::new(
                             m.clone(),
                             &v,
-                            child_path.clone(),
                             Some(children_parent),
                         )),
                     );
@@ -82,12 +74,7 @@ pub fn parse_children(
                 Model::List(m) => {
                     children.insert(
                         ustr(k),
-                        Child::ListInstance(ListInstance::new(
-                            m.clone(),
-                            &v,
-                            child_path.clone(),
-                            children_parent,
-                        )),
+                        Child::ListInstance(ListInstance::new(m.clone(), &v, children_parent)),
                     );
                 }
             }
@@ -122,17 +109,13 @@ impl ListChildInstance {
     pub fn new(
         model: Arc<List>,
         value: &Value,
-        parent_path: String,
         parent: Weak<RefCell<ListData>>,
     ) -> ListChildInstance {
         let key_value = get_key_value(model.clone(), value);
-        let path = format!("{}={}", parent_path, key_value);
-        let child_path = path.clone();
 
         let instance = ListChildInstance(Rc::new(RefCell::new(ListChildData {
             model: model.clone(),
             children: None,
-            path,
             parent,
             key_value,
         })));
@@ -140,7 +123,6 @@ impl ListChildInstance {
         instance.0.borrow_mut().children = Some(Rc::new(RefCell::new(parse_children(
             model,
             value,
-            child_path,
             &instance.0,
         ))));
 
@@ -182,5 +164,10 @@ impl ListChildData {
         }
 
         false
+    }
+
+    pub fn get_path(&self) -> String {
+        let parent_path = &self.parent.upgrade().unwrap().borrow().get_path();
+        format!("{}={}", parent_path, self.key_value)
     }
 }
