@@ -13,7 +13,7 @@ pub struct LeafInstance {
 impl LeafInstance {
     pub fn new(model: Arc<Leaf>, value: Value, parent: Parent) -> LeafInstance {
         let value_str = match value {
-            Value::String(x) => x.clone(),
+            Value::String(x) => x,
             Value::Number(x) => x.to_string(),
             Value::Bool(x) => x.to_string(),
             _ => panic!("Leaf must have a string value!"),
