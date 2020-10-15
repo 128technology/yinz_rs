@@ -38,43 +38,44 @@ pub fn parse_children(model: Arc<Container>, value: Value, parent: &Link) -> Ust
 
     if let Value::Object(x) = value {
         for (k, v) in x.into_iter() {
-            let child_model = model.get_child(&k).unwrap();
             let children_parent = Parent::ContainerData(Rc::downgrade(parent));
 
-            match child_model {
-                Model::Leaf(m) => {
-                    children.insert(
-                        ustr(&k),
-                        Child::LeafInstance(LeafInstance::new(m.clone(), v, children_parent)),
-                    );
+            if let Some(child_model) = model.get_child(&k) {
+                match child_model {
+                    Model::Leaf(m) => {
+                        children.insert(
+                            ustr(&k),
+                            Child::LeafInstance(LeafInstance::new(m.clone(), v, children_parent)),
+                        );
+                    }
+                    Model::Container(m) => {
+                        children.insert(
+                            ustr(&k),
+                            Child::ContainerInstance(ContainerInstance::new(
+                                m.clone(),
+                                v,
+                                Some(children_parent),
+                            )),
+                        );
+                    }
+                    Model::LeafList(m) => {
+                        children.insert(
+                            ustr(&k),
+                            Child::LeafListInstance(LeafListInstance::new(
+                                m.clone(),
+                                v,
+                                children_parent,
+                            )),
+                        );
+                    }
+                    Model::List(m) => {
+                        children.insert(
+                            ustr(&k),
+                            Child::ListInstance(ListInstance::new(m.clone(), v, children_parent)),
+                        );
+                    }
                 }
-                Model::Container(m) => {
-                    children.insert(
-                        ustr(&k),
-                        Child::ContainerInstance(ContainerInstance::new(
-                            m.clone(),
-                            v,
-                            Some(children_parent),
-                        )),
-                    );
-                }
-                Model::LeafList(m) => {
-                    children.insert(
-                        ustr(&k),
-                        Child::LeafListInstance(LeafListInstance::new(
-                            m.clone(),
-                            v,
-                            children_parent,
-                        )),
-                    );
-                }
-                Model::List(m) => {
-                    children.insert(
-                        ustr(&k),
-                        Child::ListInstance(ListInstance::new(m.clone(), v, children_parent)),
-                    );
-                }
-            }
+            };
         }
     }
 
