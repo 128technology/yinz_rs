@@ -65,11 +65,39 @@ mod tests {
         }
     }"#;
 
+    const INSTANCE_UNKNOWN: &str = r#"
+    {
+        "root": {
+            "foo": "bar",
+            "a-container": { "leaf-in-container": "fizz", "leaf-list-in-container": ["buzz"], "unknown": "foo" },
+            "a-list": [{ "leaf-in-list": "fizz", "leaf-list-in-list": ["buzz"], "unknown": "foo" }]
+        }
+    }"#;
+
     #[test]
     fn it_visits_all_nodes() {
         let pkg = get_package(DATA_MODEL);
         let data_model = Arc::new(DataModel::new(get_root_el(&pkg)));
         let v: Value = from_str(INSTANCE).unwrap();
+        let instance = super::DataModelInstance::new(data_model, v);
+
+        let count = Cell::new(0);
+        let visitor = |node: NodeToVisit| match node {
+            NodeToVisit::LeafInstance(_) | NodeToVisit::LeafListInstance(_) => {
+                count.set(count.get() + 1);
+            }
+        };
+
+        instance.visit(&visitor);
+
+        assert_eq!(count.get(), 5);
+    }
+
+    #[test]
+    fn it_ignores_unknown_data() {
+        let pkg = get_package(DATA_MODEL);
+        let data_model = Arc::new(DataModel::new(get_root_el(&pkg)));
+        let v: Value = from_str(INSTANCE_UNKNOWN).unwrap();
         let instance = super::DataModelInstance::new(data_model, v);
 
         let count = Cell::new(0);
